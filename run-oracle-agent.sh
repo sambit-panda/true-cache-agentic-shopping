@@ -18,4 +18,7 @@ export LLM_RESPONSES_URL="${LLM_RESPONSES_URL:-http://127.0.0.1:8080/v1/response
 export LLM_MODEL="${LLM_MODEL:-qwen3-4b}"
 
 CLASSPATH="target/classes:$OJDBC:$UCP"
+if [[ "${1:-}" == "--smoke-test" ]]; then
+  exec java -cp "$CLASSPATH" agentorders.OracleSmokeTest
+fi
 exec java -cp "$CLASSPATH" agentorders.LocalModelOracleDemo "$@"

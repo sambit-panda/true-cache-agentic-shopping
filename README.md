@@ -67,6 +67,8 @@ The deployment is CPU-only, uses 3 inference threads and one model slot, and has
 
 Build with JDK 21 and Maven from a host or pod that can reach both Oracle services and the model service. Oracle listener redirects can require running inside the cluster or on the cluster node; a simple port-forward may not be sufficient.
 
+For the Oracle prerequisites, demo schema, read-only application user, service checks, and connection setup, see the [Oracle setup guide](docs/oracle-setup.md).
+
 ```sh
 mvn -Poracle -DskipTests package
 
@@ -83,6 +85,8 @@ export ORA_CACHE_URL='jdbc:oracle:thin:@//<true-cache-host>:1521/<true-cache-ser
 Set Oracle values from your approved environment configuration; credentials are not stored in this project. If the model endpoint is configured with a bearer token, set `LLM_BEARER_TOKEN` for the Java client. The included cluster manifest does not configure model authentication because it keeps the service private to the cluster.
 
 The runner repeats the same prompt twice. It reports the model's input and cached-token counts, elapsed time, number of model/tool calls, database routes, and the application-cache bypass. The default prompt asks for the cheapest audio speaker and its exact current stock.
+
+To check Oracle connectivity and verify the catalog/stock routes without starting the model, run `./run-oracle-agent.sh --smoke-test` after building. See the [Oracle setup guide](docs/oracle-setup.md) for the required environment variables and schema setup.
 
 ## Run the Redis LangCache + True Cache flow
 
