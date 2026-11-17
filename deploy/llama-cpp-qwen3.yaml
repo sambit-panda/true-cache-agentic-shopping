@@ -1,0 +1,114 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ai-shopping-local-demo
+---
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: model-evaluation-bounds
+  namespace: ai-shopping-local-demo
+spec:
+  hard:
+    pods: "4"
+    requests.cpu: "4"
+    limits.cpu: "4"
+    requests.memory: 12Gi
+    limits.memory: 20Gi
+    requests.ephemeral-storage: 6Gi
+    limits.ephemeral-storage: 12Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: llama-cpp
+  namespace: ai-shopping-local-demo
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: llama-cpp
+  template:
+    metadata:
+      labels:
+        app: llama-cpp
+    spec:
+      automountServiceAccountToken: false
+      containers:
+        - name: server
+          image: ghcr.io/ggml-org/llama.cpp:server-b12282@sha256:086942d6ac097c894d9d5bbaf8085c53af85e113fbb9d6d61b3748863c86aa5f
+          imagePullPolicy: IfNotPresent
+          args:
+            - -hf
+            - Qwen/Qwen3-4B-GGUF:Q4_K_M
+            - --jinja
+            - --reasoning
+            - off
+            - --reasoning-format
+            - none
+            - --host
+            - 0.0.0.0
+            - --port
+            - "8080"
+            - --threads
+            - "3"
+            - --ctx-size
+            - "8192"
+            - --parallel
+            - "1"
+            - --metrics
+            - --alias
+            - qwen3-4b
+          env:
+            - name: LLAMA_CACHE
+              value: /models/cache
+          ports:
+            - name: http
+              containerPort: 8080
+          resources:
+            requests:
+              cpu: "2"
+              memory: 5Gi
+              ephemeral-storage: 1Gi
+            limits:
+              cpu: "3"
+              memory: 8Gi
+              ephemeral-storage: 6Gi
+          volumeMounts:
+            - name: model-cache
+              mountPath: /models
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            failureThreshold: 60
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 240
+            periodSeconds: 20
+            failureThreshold: 5
+      volumes:
+        - name: model-cache
+          hostPath:
+            path: /u01/truecache/ai-shopping-local-demo/model-cache
+            type: DirectoryOrCreate
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: llama-cpp
+  namespace: ai-shopping-local-demo
+spec:
+  type: ClusterIP
+  selector:
+    app: llama-cpp
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http
